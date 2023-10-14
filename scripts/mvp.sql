@@ -106,7 +106,7 @@ ORDER BY total_spent DESC;
 --- 5. 
   --  a. How many CBSAs are in Tennessee? **Warning:** The cbsa table contains information for all states, not just Tennessee.
 
-SELECT DISTINCT(cbsaname)
+SELECT DISTINCT(cbsa), cbsaname
 FROM cbsa
 WHERE cbsaname LIKE '%TN%';
 
@@ -127,22 +127,44 @@ SELECT
 --- Nashville-Davidson--Murfreesboro--Franklin, TN as the largest, Morristown, TN is the smallest.
 
 
-
   -- c. What is the largest (in terms of population) county which is not included in a CBSA? Report the county name and population.
 
+SELECT c1.cbsaname, f1.county, SUM(p1.population) AS total_population
+FROM cbsa AS c1
+FULL JOIN population AS p1
+USING (fipscounty)
+FULL JOIN fips_county AS f1
+USING (fipscounty)
+WHERE c1.cbsa IS NULL 
+	AND population IS NOT NULL
+GROUP BY c1.cbsaname, f1.county
+ORDER BY SUM(p1.population) DESC;
 
+--- "SEVIER", "TN", 95523
 
 --- 6. 
   -- a. Find all rows in the prescription table where total_claims is at least 3000. Report the drug_name and the total_claim_count.
 
+
+
   --  b. For each instance that you found in part a, add a column that indicates whether the drug is an opioid.
+
+
 
    -- c. Add another column to you answer from the previous part which gives the prescriber first and last name associated with each row.
 
+
+
 --- 7. The goal of this exercise is to generate a full list of all pain management specialists in Nashville and the number of claims they had for each opioid. **Hint:** The results from all 3 parts will have 637 rows.
+
+
 
   --  a. First, create a list of all npi/drug_name combinations for pain management specialists (specialty_description = 'Pain Management) in the city of Nashville (nppes_provider_city = 'NASHVILLE'), where the drug is an opioid (opiod_drug_flag = 'Y'). **Warning:** Double-check your query before running it. You will only need to use the prescriber and drug tables since you don't need the claims numbers yet.
 
+
+
   --  b. Next, report the number of claims per drug per prescriber. Be sure to include all combinations, whether or not the prescriber had any claims. You should report the npi, the drug name, and the number of claims (total_claim_count).
-    
+
+
+
    -- c. Finally, if you have not done so already, fill in any missing values for total_claim_count with 0. Hint - Google the COALESCE function.
