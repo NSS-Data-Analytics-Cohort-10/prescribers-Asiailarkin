@@ -47,45 +47,90 @@
 
  --  c. **Challenge Question:** Are there any specialties that appear in the prescriber table that have no associated prescriptions in the prescription table?
   
-  
-
-  --  d. **Difficult Bonus:** *Do not attempt until you have solved all other problems!* For each specialty, report the percentage of total claims by that specialty which are for opioids. Which specialties have a high percentage of opioids?
-
-
+ --  d. **Difficult Bonus:** *Do not attempt until you have solved all other problems!* For each specialty, report the percentage of total claims by that specialty which are for opioids. Which specialties have a high percentage of opioids?
 
 --- 3. 
-   -- a. Which drug (generic_name) had the highest total drug cost?
 
-SELECT generic_name, SUM(total_drug_cost) AS daily_cost
+  -- a. Which drug (generic_name) had the highest total drug cost?
+
+SELECT generic_name, CAST (total_drug_cost AS money)
 FROM prescription
 LEFT JOIN drug
 	USING (drug_name)
-GROUP BY generic_name
-ORDER BY daily_cost DESC
-LIMIT 1;
+GROUP BY generic_name, total_drug_cost
+ORDER BY total_drug_cost DESC
+LIMIT 5;
+
+-- "PIRFENIDONE", "$2,829,174.30"
 
   --  b. Which drug (generic_name) has the hightest total cost per day? **Bonus: Round your cost per day column to 2 decimal places. Google ROUND to see how this works.**
 
-SELECT generic_name, 
-	ROUND(SUM(total_drug_cost)/SUM(total_day_supply),2) AS daily_cost
+SELECT generic_name, CAST(ROUND(SUM(total_drug_cost)/SUM(total_day_supply),2) AS money) AS daily_cost
 FROM prescription
 LEFT JOIN drug
 	USING (drug_name)
 GROUP BY generic_name
 ORDER BY daily_cost DESC
 LIMIT 1;
+
+-- "C1 ESTERASE INHIBITOR", "$3,495.22"
 
 --- 4. 
   --  a. For each drug in the drug table, return the drug name and then a column named 'drug_type' which says 'opioid' for drugs which have opioid_drug_flag = 'Y', says 'antibiotic' for those drugs which have antibiotic_drug_flag = 'Y', and says 'neither' for all other drugs.
 
+SELECT drug_name, 
+	CASE WHEN opioid_drug_flag = 'Y' THEN 'opioid'
+	WHEN antibiotic_drug_flag = 'Y' THEN 'antibiotic'
+	ELSE 'neither' 
+	END AS drug_type
+FROM drug;
+
    -- b. Building off of the query you wrote for part a, determine whether more was spent (total_drug_cost) on opioids or on antibiotics. Hint: Format the total costs as MONEY for easier comparision.
+
+SELECT
+	CASE
+	WHEN d.opioid_drug_flag = 'Y' THEN 'opioid'
+	WHEN d.antibiotic_drug_flag = 'Y' THEN 'antibiotic'
+	ELSE 'neither'
+	END AS drug_type,
+CAST(SUM(p.total_drug_cost) AS money) AS total_spent
+FROM drug AS d
+LEFT JOIN prescription AS p
+USING(drug_name)
+GROUP BY drug_type
+ORDER BY total_spent DESC;
+
+-- Opiods have more money spent on them.
+
 
 --- 5. 
   --  a. How many CBSAs are in Tennessee? **Warning:** The cbsa table contains information for all states, not just Tennessee.
 
+SELECT DISTINCT(cbsaname)
+FROM cbsa
+WHERE cbsaname LIKE '%TN%';
+
+---  10
+
+
   -- b. Which cbsa has the largest combined population? Which has the smallest? Report the CBSA name and total population.
 
+SELECT
+	c.cbsaname,
+	SUM(p.population) AS total_population
+	FROM cbsa AS c
+	INNER JOIN population AS p
+		USING(fipscounty)
+	GROUP BY c.cbsaname
+	ORDER BY total_population DESC;
+
+--- Nashville-Davidson--Murfreesboro--Franklin, TN as the largest, Morristown, TN is the smallest.
+
+
+
   -- c. What is the largest (in terms of population) county which is not included in a CBSA? Report the county name and population.
+
+
 
 --- 6. 
   -- a. Find all rows in the prescription table where total_claims is at least 3000. Report the drug_name and the total_claim_count.
