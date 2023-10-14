@@ -210,7 +210,6 @@ WHERE specialty_description = 'Pain Management'
             ELSE 'not opioid'
         END) ILIKE 'opioid';
 	
--- 35	
 
   --  b. Next, report the number of claims per drug per prescriber. Be sure to include all combinations, whether or not the prescriber had any claims. You should report the npi, the drug name, and the number of claims (total_claim_count).
 
@@ -219,17 +218,70 @@ SELECT p.npi, d.drug_name, specialty_description, nppes_provider_city, p1.total_
         WHEN d.opioid_drug_flag = 'Y' THEN 'opioid'
         ELSE 'not opioid'
     END AS drug_type
-FROM prescription as p1
-CROSS JOIN drug AS d
-CROSS JOIN prescriber AS p
+FROM prescription AS p1
+FULL JOIN drug AS d ON p1.drug_name = d.drug_name
+FULL JOIN prescriber AS p ON p1.npi = p.npi
 WHERE specialty_description = 'Pain Management'
     AND nppes_provider_city ILIKE 'Nashville'
     AND (CASE
             WHEN d.opioid_drug_flag = 'Y' THEN 'opioid'
             ELSE 'not opioid'
         END) ILIKE 'opioid'
-GROUP BY p.npi, d.drug_name, specialty_description, nppes_provider_city, p1.total_claim_count, d.opioid_drug_flag
+GROUP BY p.npi, d.drug_name, specialty_description, nppes_provider_city, p1.total_claim_count, d.opioid_drug_flag;
 
-	
 
    -- c. Finally, if you have not done so already, fill in any missing values for total_claim_count with 0. Hint - Google the COALESCE function.
+   
+SELECT p.npi, d.drug_name, specialty_description, nppes_provider_city, COALESCE(p1.total_claim_count, 0) AS total_claim_count,
+    CASE
+        WHEN d.opioid_drug_flag = 'Y' THEN 'opioid'
+        ELSE 'not opioid'
+    END AS drug_type
+FROM prescription AS p1
+FULL JOIN drug AS d ON p1.drug_name = d.drug_name
+FULL JOIN prescriber AS p ON p1.npi = p.npi
+WHERE specialty_description = 'Pain Management'
+    AND nppes_provider_city ILIKE 'Nashville'
+    AND (CASE
+            WHEN d.opioid_drug_flag = 'Y' THEN 'opioid'
+            ELSE 'not opioid'
+        END) ILIKE 'opioid'
+GROUP BY p.npi, d.drug_name, specialty_description, nppes_provider_city, p1.total_claim_count, d.opioid_drug_flag;
+
+
+-- Sorry I know 7 is wrong but this was an attempt :'/
+
+-------------------
+-- Seans code
+-- EXPERIMENTAL! DANGER WILL ROBINSON
+SELECT 
+    prescriber.npi,
+    drug.drug_name as drug_name,
+	nppes_provider_last_org_name,
+	nppes_provider_first_name,
+	specialty_description,
+	nppes_provider_city,
+    COALESCE(SUM(prescription.total_claim_count), 0) as total_claims
+FROM 
+    prescriber
+LEFT JOIN 
+    prescription
+    USING (npi)
+LEFT JOIN 
+    drug
+    USING (drug_name)
+WHERE 
+    prescriber.specialty_description iLIKE '%Pain Management%'
+    AND prescriber.nppes_provider_city iLIKE '%Nashville%'
+GROUP BY 
+    prescriber.npi,
+    drug.drug_name,
+	nppes_provider_last_org_name,
+	nppes_provider_first_name,
+	specialty_description,
+	nppes_provider_city
+ORDER BY 
+    prescriber.npi,
+	nppes_provider_last_org_name,
+    drug.drug_name;
+   
