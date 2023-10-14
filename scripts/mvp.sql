@@ -131,10 +131,10 @@ SELECT
 
 SELECT c1.cbsaname, f1.county, SUM(p1.population) AS total_population
 FROM cbsa AS c1
-FULL JOIN population AS p1
-USING (fipscounty)
-FULL JOIN fips_county AS f1
-USING (fipscounty)
+	FULL JOIN population AS p1
+	USING (fipscounty)
+	FULL JOIN fips_county AS f1
+	USING (fipscounty)
 WHERE c1.cbsa IS NULL 
 	AND population IS NOT NULL
 GROUP BY c1.cbsaname, f1.county
@@ -143,28 +143,93 @@ ORDER BY SUM(p1.population) DESC;
 --- "SEVIER", "TN", 95523
 
 --- 6. 
+  
   -- a. Find all rows in the prescription table where total_claims is at least 3000. Report the drug_name and the total_claim_count.
 
+SELECT drug_name, total_claim_count
+	CASE 
+	WHERE d.opio
+FROM prescription
+WHERE total_claim_count > 3000;
 
+--- 9
 
   --  b. For each instance that you found in part a, add a column that indicates whether the drug is an opioid.
 
+SELECT
+p.drug_name,
+	CASE
+	WHEN d.opioid_drug_flag = 'Y' THEN 'opioid'
+	ELSE 'not opioid'
+	END AS drug_type,
+p.total_claim_count
+FROM prescription AS p
+FULL JOIN drug AS d
+USING(drug_name)
+WHERE total_claim_count > 3000;
+
+-- OXYCODONE HCL and HYDROCODONE-ACETAMINOPHEN are opioids
 
 
    -- c. Add another column to you answer from the previous part which gives the prescriber first and last name associated with each row.
+
+SELECT
+p2.nppes_provider_last_org_name, 
+p2.nppes_provider_first_name, 
+p1.drug_name,
+	CASE
+	WHEN d.opioid_drug_flag = 'Y' THEN 'opioid'
+	ELSE 'not opioid'
+	END AS drug_type,
+p1.total_claim_count
+FROM prescription AS p1
+FULL JOIN drug AS d
+USING(drug_name)
+FULL JOIN prescriber AS p2
+USING(npi)
+WHERE total_claim_count > 3000;
 
 
 
 --- 7. The goal of this exercise is to generate a full list of all pain management specialists in Nashville and the number of claims they had for each opioid. **Hint:** The results from all 3 parts will have 637 rows.
 
+ --  a. First, create a list of all npi/drug_name combinations for pain management specialists (specialty_description = 'Pain Management) in the city of Nashville (nppes_provider_city = 'NASHVILLE'), where the drug is an opioid (opiod_drug_flag = 'Y'). **Warning:** Double-check your query before running it. You will only need to use the prescriber and drug tables since you don't need the claims numbers yet.
 
-
-  --  a. First, create a list of all npi/drug_name combinations for pain management specialists (specialty_description = 'Pain Management) in the city of Nashville (nppes_provider_city = 'NASHVILLE'), where the drug is an opioid (opiod_drug_flag = 'Y'). **Warning:** Double-check your query before running it. You will only need to use the prescriber and drug tables since you don't need the claims numbers yet.
-
-
+SELECT p.npi, d.drug_name, specialty_description, nppes_provider_city,
+    CASE
+    WHEN d.opioid_drug_flag = 'Y' THEN 'opioid'
+    ELSE 'not opioid'
+    END AS drug_type
+FROM prescription
+FULL JOIN drug AS d ON prescription.drug_name = d.drug_name
+FULL JOIN prescriber AS p ON prescription.npi = p.npi
+WHERE specialty_description = 'Pain Management'
+    AND nppes_provider_city ILIKE 'Nashville'
+    AND (CASE
+            WHEN d.opioid_drug_flag = 'Y' THEN 'opioid'
+            ELSE 'not opioid'
+        END) ILIKE 'opioid';
+	
+-- 35	
 
   --  b. Next, report the number of claims per drug per prescriber. Be sure to include all combinations, whether or not the prescriber had any claims. You should report the npi, the drug name, and the number of claims (total_claim_count).
 
+SELECT p.npi, d.drug_name, specialty_description, nppes_provider_city, p1.total_claim_count,
+    CASE
+        WHEN d.opioid_drug_flag = 'Y' THEN 'opioid'
+        ELSE 'not opioid'
+    END AS drug_type
+FROM prescription as p1
+CROSS JOIN drug AS d
+CROSS JOIN prescriber AS p
+WHERE specialty_description = 'Pain Management'
+    AND nppes_provider_city ILIKE 'Nashville'
+    AND (CASE
+            WHEN d.opioid_drug_flag = 'Y' THEN 'opioid'
+            ELSE 'not opioid'
+        END) ILIKE 'opioid'
+GROUP BY p.npi, d.drug_name, specialty_description, nppes_provider_city, p1.total_claim_count, d.opioid_drug_flag
 
+	
 
    -- c. Finally, if you have not done so already, fill in any missing values for total_claim_count with 0. Hint - Google the COALESCE function.
